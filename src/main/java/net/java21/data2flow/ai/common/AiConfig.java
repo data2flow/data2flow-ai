@@ -32,6 +32,7 @@ import net.java21.data2flow.ai.settings.AiSettingsService;
 import net.java21.data2flow.ai.usage.CounterStore;
 import net.java21.data2flow.ai.usage.InMemoryCounterStore;
 import net.java21.data2flow.ai.usage.RedisCounterStore;
+import net.java21.data2flow.ai.usage.QuotaEvents;
 import net.java21.data2flow.ai.usage.UsageLimiter;
 import net.java21.data2flow.ai.usage.UsageRepository;
 import net.java21.data2flow.ai.usage.UsageService;
@@ -111,10 +112,10 @@ public class AiConfig {
         return new PipelineClient(new InternalHttp(properties.pipelineUri(), Duration.ofSeconds(10)));
     }
 
-    /** BR-IAM-13: core 원천 판정을 10초 이내로만 캐시 */
+    /** BR-IAM-13: core 원천 판정을 10초 이내로만 캐시. 장기 토큰 요청은 토큰 ID로 따로 판정·캐시한다(IAM-05.01) */
     @Bean
     PermissionLookup permissionLookup(CoreClient core, Clock clock) {
-        return new CachingPermissionLookup(core::accessGrant, Duration.ofSeconds(10), clock);
+        return new CachingPermissionLookup(PermissionLookup.tokenAware(core::accessGrant), Duration.ofSeconds(10), clock);
     }
 
     // ───────────── LLM(ADR-040) ─────────────
@@ -140,8 +141,8 @@ public class AiConfig {
     }
 
     @Bean
-    UsageLimiter usageLimiter(CounterStore counters, AiProperties properties, Clock clock) {
-        return new UsageLimiter(counters, clock, properties.zone());
+    UsageLimiter usageLimiter(CounterStore counters, AiProperties properties, Clock clock, ObjectProvider<QuotaEvents> quotaEvents) {
+        return new UsageLimiter(counters, clock, properties.zone(), quotaEvents.getIfAvailable(() -> QuotaEvents.LOG_ONLY));
     }
 
     @Bean

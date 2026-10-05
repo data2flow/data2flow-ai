@@ -45,12 +45,25 @@ public class CoreClient implements AuditRecorder {
         this.auditExecutor = auditExecutor;
     }
 
-    /** 사용자 권한(없는 사용자·비활성·다른 조직이면 권한 없음). core에 닿지 못하면 503(fail-closed) */
+    /** 웹 신원의 권한(없는 사용자·비활성·다른 조직이면 권한 없음). core에 닿지 못하면 503(fail-closed) */
     public AccessGrant accessGrant(long organizationId, long userId) {
+        return accessGrant(organizationId, userId, null);
+    }
+
+    /**
+     * 신원의 권한. 장기 토큰(MCP·API 키) 주체면 {@code ?accessTokenId=}로 묻는다 — core가 소유자 권한 ∩ 토큰 범위·공간(서비스 계정은 범위 권한)으로
+     * 판정한다(IAM-05.01·IAM-04.07). 웹 신원이면 {@code accessTokenId}는 null
+     */
+    public AccessGrant accessGrant(long organizationId, long userId, Long accessTokenId) {
         JsonNode body;
         try {
-            body = http.get(null, b -> b.path("/internal/core/organizations/{org}/users/{user}/access-grant").build(organizationId, userId),
-                    CommonErrorCode.RESOURCE_NOT_FOUND);
+            body = http.get(null, b -> {
+                b.path("/internal/core/organizations/{org}/users/{user}/access-grant");
+                if (accessTokenId != null) {
+                    b.queryParam("accessTokenId", accessTokenId);
+                }
+                return b.build(organizationId, userId);
+            }, CommonErrorCode.RESOURCE_NOT_FOUND);
         } catch (BusinessException e) {
             if (e.getErrorCode() == CommonErrorCode.RESOURCE_NOT_FOUND) {
                 return AccessGrant.none();

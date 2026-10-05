@@ -56,4 +56,69 @@ class UsageLimiterTest {
         assertThat(limiter.usedTokensToday(2)).isEqualTo(1000);
         assertThatThrownBy(() -> limiter.acquire(s, 9L)).isInstanceOf(BusinessException.class);
     }
+
+    @Test
+    @DisplayName("[AIA-07.04][EVT-AIA-03] 한도 도달 시 ai.quota.exceeded를 한도마다 하루 한 번(조직 요청·사용자 요청·조직 토큰), 발행 실패면 다음 초과 때 다시")
+    void quotaExceededEventOncePerLimitPerDay() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-10-05T01:00:00Z"));   // KST 10:00
+        java.util.List<net.java21.data2flow.contracts.message.event.AiQuotaExceeded> sent = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicBoolean fail = new java.util.concurrent.atomic.AtomicBoolean();
+        UsageLimiter limiter = new UsageLimiter(new InMemoryCounterStore(clock), clock, ZoneId.of("Asia/Seoul"), (org, event, onFailure) -> {
+            assertThat(org).isEqualTo(3L);
+            if (fail.get()) {
+                onFailure.run();
+                return;
+            }
+            sent.add(event);
+        });
+        AiSettings s = settings(3, 3, 1000, 1);
+        limiter.acquire(s, 7L);
+        // 사용자 한도(1) → USER·REQUESTS, 두 번째 초과는 다시 내지 않음
+        assertThatThrownBy(() -> limiter.acquire(s, 7L)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> limiter.acquire(s, 7L)).isInstanceOf(BusinessException.class);
+        assertThat(sent).singleElement().satisfies(e -> {
+            assertThat(e.scope()).isEqualTo(net.java21.data2flow.contracts.message.event.AiQuotaExceeded.Scope.USER);
+            assertThat(e.userId()).isEqualTo(7L);
+            assertThat(e.limitType()).isEqualTo(net.java21.data2flow.contracts.message.event.AiQuotaExceeded.LimitType.REQUESTS);
+            assertThat(e.resetAt()).isEqualTo(Instant.parse("2026-10-05T15:00:00Z"));
+        });
+        // 조직 한도(3) → ORG·REQUESTS. 첫 발행이 실패하면 표시를 되돌려 다음 초과 때 낸다
+        limiter.acquire(s, 8L);
+        limiter.acquire(s, null);
+        fail.set(true);
+        assertThatThrownBy(() -> limiter.acquire(s, 9L)).isInstanceOf(BusinessException.class);
+        assertThat(sent).hasSize(1);
+        fail.set(false);
+        assertThatThrownBy(() -> limiter.acquire(s, 9L)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> limiter.acquire(s, 9L)).isInstanceOf(BusinessException.class);
+        assertThat(sent).hasSize(2);
+        assertThat(sent.get(1).scope()).isEqualTo(net.java21.data2flow.contracts.message.event.AiQuotaExceeded.Scope.ORG);
+        assertThat(sent.get(1).userId()).isNull();
+        // 다음 날(자정 뒤) 같은 한도에 다시 닿으면 다시 낸다
+        clock.advance(Duration.ofDays(1));
+        for (int i = 0; i < 3; i++) {
+            limiter.acquire(s, (long) (100 + i));
+        }
+        assertThatThrownBy(() -> limiter.acquire(s, 200L)).isInstanceOf(BusinessException.class);
+        assertThat(sent).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("[AIA-07.04][EVT-AIA-03] 토큰 한도 도달 → ORG·TOKENS, 발행 쪽 예외가 나도 응답은 429 그대로")
+    void tokenLimitEventAndPublisherErrorIgnored() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-10-05T01:00:00Z"));
+        java.util.List<net.java21.data2flow.contracts.message.event.AiQuotaExceeded> sent = new java.util.ArrayList<>();
+        UsageLimiter limiter = new UsageLimiter(new InMemoryCounterStore(clock), clock, ZoneId.of("Asia/Seoul"), (org, event, onFailure) -> {
+            sent.add(event);
+            throw new IllegalStateException("broker down");
+        });
+        AiSettings s = settings(4, 100, 10, 100);
+        limiter.addTokens(4, 10);
+        assertThatThrownBy(() -> limiter.acquire(s, 7L)).isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(AiErrorCode.AI_QUOTA_EXCEEDED));
+        assertThat(sent).singleElement().satisfies(e -> {
+            assertThat(e.scope()).isEqualTo(net.java21.data2flow.contracts.message.event.AiQuotaExceeded.Scope.ORG);
+            assertThat(e.limitType()).isEqualTo(net.java21.data2flow.contracts.message.event.AiQuotaExceeded.LimitType.TOKENS);
+        });
+    }
 }

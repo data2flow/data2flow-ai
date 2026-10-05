@@ -217,8 +217,11 @@ class CommentaryFlowIT extends AbstractIT {
     @Test
     @DisplayName("[AIA-01.01] EVT-ANA-01 자동 해설: 조직 설정이 켜져 있으면 만들고, 같은 실행은 한 번만(멱등)")
     void autoCommentary() {
-        String event = "{\"v\":1,\"messageId\":\"m1\",\"type\":\"analytics.run.succeeded\",\"organizationId\":" + ORG
-                + ",\"payload\":{\"runId\":\"501\",\"analysisId\":\"77\",\"status\":\"SUCCEEDED\"}}";
+        // analytics(Python)가 실제로 보내는 모양(contracts 픽스처 analytics-run-succeeded와 같은 필드, requestId: null 포함)
+        String event = "{\"v\": 1, \"messageId\": \"5a1e7c3d-0b2f-4e6a-9c8d-000000000003\", \"type\": \"analytics.run.succeeded\", "
+                + "\"organizationId\": " + ORG + ", \"occurredAt\": \"2026-10-05T00:00:42Z\", \"requestId\": null, \"payload\": {\"runId\": \"501\", "
+                + "\"analysisId\": \"77\", \"status\": \"SUCCEEDED\", \"progress\": 100, \"trigger\": \"MANUAL\", \"stage\": \"SAVE\", "
+                + "\"finishedAt\": \"2026-10-05T00:00:42Z\"}}";
         assertThat(autoCommentary.handle(event.getBytes(StandardCharsets.UTF_8))).isFalse();   // 설정 꺼짐
         jdbc.update("""
                 INSERT INTO data2flow_ai.ai_settings (organization_id, enabled, provider, model, auto_commentary, version)

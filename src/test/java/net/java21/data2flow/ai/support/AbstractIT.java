@@ -66,6 +66,9 @@ public abstract class AbstractIT {
         r.add("spring.datasource.password", POSTGRES::getPassword);
         r.add("spring.data.redis.host", REDIS::getHost);
         r.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+        // 운영 500ms는 그대로 두고, 부하가 큰 개발 PC(로컬 미리보기 동시 실행)에서 동시 200건 시험(TC-AIA-063)이 시간 초과로
+        // 메모리 대체로 빠지지 않게 시험에서만 늘린다
+        r.add("spring.data.redis.timeout", () -> "5s");
         r.add("data2flow.ai.flyway-mode", () -> "migrate");
         r.add("data2flow.ai.core-uri", Downstream::url);
         r.add("data2flow.ai.analytics-uri", Downstream::url);
@@ -92,7 +95,10 @@ public abstract class AbstractIT {
             if (!m.find()) {
                 return new MockResponse().setResponseCode(404);
             }
-            String grant = GRANTS.get(m.group(1) + ":" + m.group(2));
+            Matcher token = Pattern.compile("[?&]accessTokenId=(\\d+)").matcher(req.getPath());
+            String grant = token.find() && GRANTS.containsKey(m.group(1) + ":" + m.group(2) + ":t" + token.group(1))
+                    ? GRANTS.get(m.group(1) + ":" + m.group(2) + ":t" + token.group(1))
+                    : GRANTS.get(m.group(1) + ":" + m.group(2));
             if (grant == null) {
                 return new MockResponse().setResponseCode(200).setHeader("Content-Type", "application/json")
                         .setBody("{\"header\":{\"isSuccessful\":true},\"response\":{\"active\":false}}");

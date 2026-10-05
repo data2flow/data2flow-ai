@@ -29,6 +29,8 @@ spring:
     username: ${DATA2FLOW_RABBITMQ_USERNAME:guest}
     password: ${DATA2FLOW_RABBITMQ_PASSWORD:guest}
     connection-timeout: 5s
+    # EVT-AIA-03 발행은 publisher confirm(ack)을 받아야 성공(reliability-and-ha.md ⑦)
+    publisher-confirm-type: correlated
   # 사용량 한도·MCP 호출 한도 카운터(ADR-022: 캐시 전용, 키 접두사 data2flow:). 없어도 기동하고 파드별 메모리로 대신한다
   data:
     redis:
