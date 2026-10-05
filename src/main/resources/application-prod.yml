@@ -1,5 +1,14 @@
-# prod: JSON 로그(요청 ID는 MDC requestId), 비밀값은 k8s Secret 환경변수
+# prod: JSON 로그(요청 ID는 MDC requestId), 비밀값은 k8s Secret 환경변수. Flyway는 validate만(ADR-030)
+# FAKE 제공자는 고를 수 없다(가짜 해설이 운영에 나가지 않게). 키가 없으면 NONE(수치 요약 템플릿)
 logging:
   structured:
     format:
       console: ecs
+    json:
+      customizer: net.java21.data2flow.contracts.secret.SecretMaskingJsonMembersCustomizer
+data2flow:
+  ai:
+    flyway-mode: validate
+    llm:
+      default-provider: ${DATA2FLOW_AI_DEFAULT_PROVIDER:NONE}
+      allowed-providers: NONE,ANTHROPIC

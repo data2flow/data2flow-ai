@@ -1,0 +1,363 @@
+# 오류 코드 설명(AIA-09.01 도움말 근거). 원천: data2flow-docs spec/detail/00-error-codes.md(tools/errcodes.py 생성물)에서 추출
+AUTH_INVALID_CREDENTIALS	401	공통	아이디·비밀번호 불일치, 잠금, 비활성(구분하지 않음, BR-IAM-04)	아이디 또는 비밀번호가 올바르지 않습니다. 여러 번 실패하면 잠시 후 다시 시도해 주세요
+AUTH_TOKEN_INVALID	401	공통	토큰 없음, 서명 오류, 종류 불일치, 폐기된 kid	다시 로그인해 주세요
+AUTH_TOKEN_EXPIRED	401	공통	Access 만료. BFF가 재발급 후 1회 재시도	(표시 안 함)
+AUTH_SESSION_REVOKED	401	공통	로그아웃, 강제 종료, Refresh 재사용 탐지로 세션 폐기	세션이 종료되었습니다. 다시 로그인해 주세요
+AUTH_SESSION_EXPIRED	401	공통	유휴 30분 또는 절대 12시간 초과	오랫동안 사용하지 않아 로그아웃되었습니다
+AUTH_PASSWORD_CHANGE_REQUIRED	403	공통	임시 비밀번호 상태에서 허용 외 API 호출	비밀번호를 먼저 변경해 주세요
+AUTH_CSRF_INVALID	403	공통	BFF: 상태 변경 요청의 CSRF 토큰·Origin 불일치	요청을 확인할 수 없습니다. 페이지를 새로고침해 주세요
+AUTH_RATE_LIMITED	429	공통	로그인·재발급·비밀번호 재설정 한도 초과(`Retry-After`)	요청이 너무 많습니다. {n}초 후 다시 시도해 주세요
+AUTH_UNAVAILABLE	503	공통	로그인·재발급 경로에서 auth·core·Redis 장애(fail-closed)	일시적으로 로그인할 수 없습니다. 잠시 후 다시 시도해 주세요
+PERMISSION_DENIED	403	공통	역할 권한 부족(감사 `ACCESS_DENIED` 기록). 권한 밖 **객체**는 403이 아니라 404로 숨김	이 작업을 할 권한이 없습니다
+RESOURCE_NOT_FOUND	404	공통	정의되지 않은 경로, 또는 도메인 코드가 따로 없는 객체 없음·권한 밖 객체	요청한 대상을 찾을 수 없습니다
+INVALID_REQUEST	400	공통	요청 형식·필드 검증 실패(타입, 필수, 길이, 범위, 본문 읽기 실패, 파라미터 누락)와 도메인 전용 코드가 없는 업무 규칙 입력 오류. 응답 `errors[{field, code, message}]`(design/api-rules.md §4.1)	입력값을 확인해 주세요: {필드별 사유}
+VERSION_CONFLICT	409	공통	낙관적 잠금 실패(요청 본문 `baseVersion` ≠ 현재 `version`). 도메인 전용 코드가 없는 모든 수정 API(BR-OPS-21, api-rules §5)	다른 사용자가 먼저 수정했습니다. 새로고침 후 다시 시도해 주세요
+IDEMPOTENCY_CONFLICT	409	공통	같은 `Idempotency-Key`의 첫 요청이 아직 처리 중(`Retry-After`)	같은 요청을 처리하고 있습니다. 잠시 후 결과를 확인해 주세요
+IDEMPOTENCY_KEY_REUSED	409	공통	같은 `Idempotency-Key`를 다른 본문으로 재사용(BR-OPS-20)	같은 요청 키가 다른 내용으로 사용되었습니다
+RATE_LIMITED	429	공통	로그인 외 API·공개 접점 호출 한도 초과(`Retry-After`, OPS-12·NFR-13.03)	요청이 너무 많습니다. {n}초 후 다시 시도해 주세요
+PAYLOAD_TOO_LARGE	413	공통	본문·업로드가 게이트웨이/서비스 상한 초과(도메인 전용 코드가 없을 때)	파일 또는 요청이 너무 큽니다. 최대 {limit}
+SERVICE_UNAVAILABLE	503	공통	게이트웨이 fail-closed(auth introspection 불가), 하위 서비스 장애·유지보수 모드(`Retry-After`)	일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요
+INTERNAL_ERROR	500	공통	예상하지 못한 서버 오류. 응답에 `X-REQUEST-ID`만 노출, 상세는 로그	문제가 발생했습니다. 계속되면 요청 ID {requestId}를 관리자에게 알려 주세요
+AUTH_PENDING_APPROVAL	403	IAM	가입 신청 계정이 관리자 승인 전(맞는 비밀번호일 때만)	관리자 승인 대기 중입니다. 승인되면 메일로 알려 드립니다
+PASSWORD_POLICY_VIOLATION	400	IAM	길이·유출·재사용·아이디 포함	비밀번호 규칙에 맞지 않습니다: {사유}
+PASSWORD_CURRENT_MISMATCH	400	IAM	현재 비밀번호 불일치	현재 비밀번호가 올바르지 않습니다
+LOGIN_ID_INVALID	400	IAM	형식·예약어	아이디는 영문 소문자, 숫자, . _ - 로 4~30자여야 합니다
+LOGIN_ID_DUPLICATED	409	IAM	이미 사용 중	이미 사용 중인 아이디입니다
+EMAIL_DUPLICATED	409	IAM	조직 내 이메일 중복	이미 등록된 이메일입니다
+INVITATION_INVALID	410	IAM	만료·사용됨·취소됨·없음	초대 링크가 만료되었거나 이미 사용되었습니다. 관리자에게 다시 요청해 주세요
+INVITATION_PENDING_EXISTS	409	IAM	같은 이메일 PENDING 초대 존재	이미 초대한 이메일입니다. 재발송을 이용해 주세요
+INVITATION_RESEND_LIMIT	429	IAM	재발송 5회 초과	재발송 한도를 넘었습니다. 초대를 취소한 뒤 다시 초대해 주세요
+RESET_TOKEN_INVALID	410	IAM	재설정 링크 만료·사용됨	재설정 링크가 만료되었습니다. 다시 요청해 주세요
+USER_NOT_FOUND	404	IAM	없거나 다른 조직	사용자를 찾을 수 없습니다
+USER_STATE_CONFLICT	409	IAM	허용되지 않은 상태 전이	현재 상태에서는 할 수 없는 작업입니다
+LAST_ADMIN_REQUIRED	409	IAM	마지막 ADMIN 변경 시도	관리자가 최소 1명 있어야 합니다
+SELF_MODIFICATION_FORBIDDEN	409	IAM	자기 역할·상태 변경	자신의 역할이나 상태는 바꿀 수 없습니다
+SPACE_SCOPE_INVALID	400	IAM	존재하지 않거나 범위 밖 공간 지정	지정할 수 없는 공간이 포함되어 있습니다
+API_TOKEN_SCOPE_EXCEEDED	400	IAM	발급자 권한을 넘는 범위	내 권한을 넘는 범위는 지정할 수 없습니다
+API_TOKEN_EXPIRY_INVALID	400	IAM	만료일 없음·1년 초과	만료일은 오늘부터 1년 이내여야 합니다
+API_TOKEN_LIMIT_EXCEEDED	409	IAM	조직 50개 한도 (NFR-11.01)	API 키 한도를 넘었습니다
+API_TOKEN_NOT_FOUND	404	IAM		토큰을 찾을 수 없습니다
+MFA_REQUIRED	401	IAM	비밀번호 확인 후 TOTP 입력 필요 (BFF가 TOTP 화면으로 전환)	인증 앱의 6자리 코드를 입력해 주세요
+MFA_SETUP_REQUIRED	403	IAM	필수 역할인데 2단계 인증 미설정	2단계 인증을 먼저 설정해 주세요
+MFA_CODE_INVALID	401	IAM	TOTP·복구 코드 불일치	인증 코드가 올바르지 않습니다
+SIGNUP_DISABLED	404	IAM	가입 신청 꺼짐	(가입 신청 화면 없음)
+SIGNUP_DOMAIN_NOT_ALLOWED	400	IAM	허용 도메인 아님	이 이메일 도메인으로는 신청할 수 없습니다
+SIGNUP_RATE_LIMITED	429	IAM	가입 신청 한도(IP당 시간당 5회) 초과	신청이 너무 많습니다. 잠시 후 다시 시도해 주세요
+SIGNUP_REQUEST_INVALID	410	IAM	확인 링크 만료·사용됨	확인 링크가 만료되었습니다. 다시 신청해 주세요
+CUSTOM_ROLE_IN_USE	409	IAM	사용 중 역할 삭제	이 역할을 쓰는 사용자가 있어 삭제할 수 없습니다
+CUSTOM_ROLE_PERMISSION_FORBIDDEN	400	IAM	ADMIN 전용 권한 포함	사용자 정의 역할에 넣을 수 없는 권한입니다
+SERVICE_ACCOUNT_NOT_FOUND	404	IAM		서비스 계정을 찾을 수 없습니다
+SOURCE_NOT_FOUND	404	DSC		데이터 소스를 찾을 수 없습니다
+SOURCE_CODE_DUPLICATE	409	DSC		같은 코드의 소스가 이미 있습니다
+SOURCE_CLIENT_ID_DUPLICATE	409	DSC	client-id 충돌	다른 소스가 같은 client-id를 쓰고 있습니다
+SOURCE_CONFIG_INVALID	400	DSC	유형별 스키마 위반	연결 설정이 올바르지 않습니다: {필드}
+SOURCE_STATE_CONFLICT	409	DSC	허용되지 않은 lifecycle 전이	현재 상태에서는 할 수 없는 작업입니다
+SOURCE_IN_USE	409	DSC	기기가 있어 삭제 불가	이 소스에 연결된 기기가 {n}대 있습니다
+SOURCE_LIMIT_EXCEEDED	429	DSC	소스 50개·토픽 20개 초과	소스(또는 토픽) 수 한도를 넘었습니다
+SOURCE_SECRET_REQUIRED	400	DSC	인증 방식에 필요한 비밀값 없음	인증 정보를 입력하세요
+SOURCE_ROTATION_FAILED	409	DSC	자격증명 교체 실패	새 인증 정보로 연결하지 못해 이전 정보를 유지합니다
+WEBHOOK_SIGNATURE_INVALID	401	DSC	서명 검증 실패(외부 호출자)	(호출자 응답) invalid signature
+WEBHOOK_TIMESTAMP_INVALID	401	DSC	요청 시각 헤더가 없거나 허용 범위(±5분)를 벗어남(외부 호출자, 재생 공격 방지)	(호출자 응답) 요청 시각이 허용 범위(5분)를 벗어났습니다
+WEBHOOK_REPLAYED	409	DSC	같은 요청 ID 재사용	(호출자 응답) replayed request
+CREDENTIAL_NOT_FOUND	404	DSC		자격증명을 찾을 수 없습니다
+CREDENTIAL_REVOKED	409	DSC	폐기된 자격증명 수정	이미 폐기된 자격증명입니다
+OUTPUT_NOT_FOUND	404	DSC		출력 연결을 찾을 수 없습니다
+EXTERNAL_API_QUOTA_EXCEEDED	429	DSC	공공 API 일일 한도	오늘 호출 한도에 도달해 내일 다시 수집합니다
+SITE_LOCATION_REQUIRED	400	DSC	외부 맥락 소스에 사이트 좌표 없음	사이트 위치(위도·경도)를 먼저 입력하세요
+CONNECTOR_NOT_FOUND	404	DSC	없는 커넥터 키	커넥터를 찾을 수 없습니다
+CONNECTOR_UNAVAILABLE	409	DSC	비활성 커넥터 선택·사용	이 커넥터는 지금 사용할 수 없습니다: {사유}
+SOURCE_AUTH_UNSUPPORTED	400	DSC	커넥터가 지원하지 않는 인증 방식	이 커넥터에서 지원하지 않는 인증 방식입니다
+SOURCE_TLS_VERIFY_REQUIRED	400	DSC	운영 소스에서 TLS 검증 끄기	운영 소스는 TLS 인증서 검증을 끌 수 없습니다
+SOURCE_SCHEMA_INVALID	400	DSC	.proto/.avsc 파싱 실패	스키마 파일을 읽을 수 없습니다: {줄}:{내용}
+SOURCE_SEND_UNSUPPORTED	409	DSC	송신 불가 소스로 드라이버 설정	이 소스로는 명령을 보낼 수 없습니다
+EDGE_NOT_FOUND	404	DSC		엣지 게이트웨이를 찾을 수 없습니다
+EDGE_TOKEN_INVALID	401	DSC	만료·사용된 등록 토큰	등록 토큰이 유효하지 않습니다
+EDGE_RULE_TARGET_INVALID	400	DSC	엣지에 연결되지 않은 기기 대상	이 엣지에 연결된 기기만 선택할 수 있습니다
+EDGE_STATE_CONFLICT	409	DSC	오프라인 엣지에 즉시 작업	엣지가 연결되어 있지 않아 다음 연결 때 적용됩니다
+ING_QUERY_RANGE_TOO_LARGE	400	ING	조회 기간 31일 초과	조회 기간은 최대 31일입니다
+ING_RAW_MESSAGE_NOT_FOUND	404	ING	없거나 권한 밖·보관 만료	메시지를 찾을 수 없습니다
+ING_PAYLOAD_FORBIDDEN	403	ING	payload 열람 권한 없음	원본 보기 권한이 없습니다
+ING_DLQ_ITEM_LOCKED	409	ING	다른 사용자가 재처리 중	다른 사용자가 처리 중입니다
+ING_DLQ_BATCH_TOO_LARGE	400	ING	재처리 5,000건 초과	한 번에 최대 5,000건까지 재처리할 수 있습니다
+ING_REPROCESS_ALREADY_RUNNING	409	ING	같은 소스에 실행 중 작업	이 소스에 실행 중인 재처리 작업이 있습니다
+ING_REPROCESS_OUT_OF_RETENTION	400	ING	원본 보관 기간 밖	원본이 보관된 기간만 재처리할 수 있습니다
+ING_REPROCESS_NOT_CANCELLABLE	409	ING	이미 끝난 작업 취소	이미 끝난 작업입니다
+SCRIPT_NOT_FOUND	404	SCR	없거나 권한 밖	스크립트를 찾을 수 없습니다
+SCRIPT_NAME_DUPLICATED	409	SCR	이름 중복	이미 같은 이름의 스크립트가 있습니다
+SCRIPT_QUOTA_EXCEEDED	409	SCR	조직 한도 초과	스크립트를 더 만들 수 없습니다(최대 300개)
+SCRIPT_CODE_TOO_LARGE	400	SCR	64KB 초과	코드가 너무 큽니다(최대 64KB)
+SCRIPT_STATIC_CHECK_FAILED	400	SCR	검사 오류 상태로 배포	코드 검사 오류를 먼저 고치세요
+SCRIPT_TEST_FAILED	400	SCR	테스트 케이스 실패 상태로 배포	실패한 테스트 케이스가 있습니다
+SCRIPT_VERSION_CONFLICT	409	SCR	기준 버전 불일치(동시 편집)	다른 사용자가 먼저 변경했습니다
+SCRIPT_BINDING_INVALID	400	SCR	DECODE를 소스 외에 연결 등	이 대상에는 연결할 수 없습니다
+SCRIPT_BINDING_DUPLICATED	409	SCR	대상에 같은 종류 스크립트가 이미 있음	이 대상에는 이미 스크립트가 연결되어 있습니다
+SCRIPT_IN_USE	409	SCR	사용 중 삭제	사용 중인 스크립트는 삭제할 수 없습니다
+SCRIPT_CONFIG_SECRET_FORBIDDEN	400	SCR	비밀값 이름	비밀값은 설정값으로 저장할 수 없습니다
+SCRIPT_MODULE_NOT_FOUND	404	SCR	없는 모듈 버전	모듈 버전을 찾을 수 없습니다
+SCRIPT_MODULE_IN_USE	409	SCR	사용 중 모듈 버전 삭제	사용 중인 모듈 버전입니다
+SCRIPT_FORMULA_INVALID	400	SCR	수식 문법·키 오류	수식이 올바르지 않습니다
+SCRIPT_FORMULA_KEY_CONFLICT	409	SCR	결과 키 중복	이미 있는 측정 항목입니다
+SCRIPT_AI_UNAVAILABLE	503	SCR	AI 도우미 장애·한도	AI 도우미를 지금 쓸 수 없습니다
+SPACE_NOT_FOUND	404	DEV	없거나 권한 밖 공간	공간을 찾을 수 없습니다
+SPACE_DEPTH_EXCEEDED	400	DEV	깊이 6 초과	공간은 6단계까지만 만들 수 있습니다
+SPACE_TYPE_INVALID	400	DEV	타입 순서 위반	상위 공간보다 큰 단위로 만들 수 없습니다
+SPACE_NAME_DUPLICATE	409	DEV	같은 부모 아래 이름 중복	같은 이름의 공간이 이미 있습니다
+SPACE_CODE_DUPLICATE	409	DEV	조직 안 공간 코드(`code`) 중복	같은 코드의 공간이 이미 있습니다
+SPACE_NOT_EMPTY	409	DEV	하위나 기기가 있어 삭제 불가	하위 공간이나 기기가 있어 삭제할 수 없습니다
+SPACE_MOVE_CYCLE	400	DEV	자기 하위로 이동	하위 공간으로는 옮길 수 없습니다
+SCHEDULE_OVERLAP	400	DEV	시간표 구간 겹침	같은 요일의 시간 구간이 겹칩니다
+DEVICE_NOT_FOUND	404	DEV	없거나 권한 밖 기기	기기를 찾을 수 없습니다
+DEVICE_DUPLICATE	409	DEV	같은 소스에 같은 외부 ID	같은 외부 ID의 기기가 이미 있습니다
+DEVICE_STATE_CONFLICT	409	DEV	허용되지 않은 상태 전이, 동시 변경	다른 사용자가 이미 변경했습니다. 새로고침 후 다시 시도하세요
+DEVICE_MODEL_REQUIRED	400	DEV	승인·활성화 시 모델 없음	기기 모델을 지정하세요
+DEVICE_SPACE_REQUIRED	400	DEV	승인·활성화 시 공간 없음	공간을 지정하세요
+DEVICE_IN_USE	409	DEV	삭제 시 참조 있음	사용 중인 기기입니다(작업 지시, 플로우)
+DEVICE_TAG_LIMIT	400	DEV	태그 20개 초과	태그는 20개까지 붙일 수 있습니다
+DEVICE_AUTOREG_LIMIT	429	DEV	소스 자동 등록 한도 초과(내부)	– (운영 알람)
+DEVICE_REJECTED	409	DEV	무시 목록에 있는 외부 ID 자동 등록(내부)	– (원본에 `UNKNOWN_DEVICE_REJECTED` 기록)
+METRIC_STATE_CONFLICT	409	DEV	이미 검증·무시된 항목 처리	이미 처리된 측정 항목입니다
+JOB_STATE_CONFLICT	409	DEV	끝난 작업 취소 등	현재 상태에서는 할 수 없는 작업입니다
+MODEL_NOT_FOUND	404	DEV		기기 모델을 찾을 수 없습니다
+MODEL_CODE_DUPLICATE	409	DEV		같은 코드의 모델이 이미 있습니다
+MODEL_BUILTIN_READONLY	403	DEV	기본 모델 수정·삭제	기본 제공 모델은 수정할 수 없습니다. 복제해서 사용하세요
+MODEL_IN_USE	409	DEV	사용 중 모델 삭제	이 모델을 쓰는 기기가 있습니다
+METRIC_NOT_FOUND	404	DEV		측정 항목을 찾을 수 없습니다
+METRIC_KEY_INVALID	400	DEV	키 형식 위반(`^[A-Za-z][A-Za-z0-9_]{0,63}$`)	측정 항목 키는 영문자로 시작하고 영문자·숫자·밑줄로 된 64자 이하여야 합니다
+METRIC_KEY_DUPLICATE	409	DEV	키·별칭 중복	이미 쓰고 있는 키입니다
+METRIC_ALIAS_INVALID	400	DEV	별칭의 별칭, 미검증 대상	별칭은 검증된 측정 항목에만 연결할 수 있습니다
+GROUP_NOT_FOUND	404	DEV		그룹을 찾을 수 없습니다
+GROUP_SIZE_EXCEEDED	400	DEV	1,000대 초과	그룹에는 1,000대까지 넣을 수 있습니다
+GROUP_NAME_DUPLICATE	409	DEV		같은 이름의 그룹이 있습니다
+ATTRIBUTE_READONLY	403	DEV	CLIENT 속성 수정	기기가 보고하는 속성은 수정할 수 없습니다
+ATTRIBUTE_SCHEMA_VIOLATION	400	DEV	모델 속성 스키마 위반	속성 값이 형식에 맞지 않습니다
+JOB_LIMIT_EXCEEDED	429	DEV	동시 작업 3개 초과, 대상 5,000 초과	동시에 실행할 수 있는 작업 수를 넘었습니다
+JOB_NOT_FOUND	404	DEV		작업을 찾을 수 없습니다
+WORKORDER_NOT_FOUND	404	DEV		작업 지시를 찾을 수 없습니다
+WORKORDER_STATE_CONFLICT	409	DEV	허용되지 않은 전이	현재 상태에서는 할 수 없는 작업입니다
+CALENDAR_EVENT_INVALID	400	DEV	기간 역전 등	시작일이 종료일보다 늦습니다
+DEVICE_REPLACE_INVALID	400	DEV	다른 kind 기기로 교체 등	같은 종류의 기기로만 교체할 수 있습니다
+ATTRIBUTE_NOT_APPLICABLE	409	DEV	기기가 공유 속성 적용을 지원하지 않음	이 기기에는 설정을 내려보낼 수 없습니다
+FLOORPLAN_IMAGE_INVALID	400	DEV	형식·크기 위반(PNG/JPG/SVG, 10MB)	이미지 형식이나 크기가 올바르지 않습니다
+SEMANTIC_TAG_UNKNOWN	400	DEV	표준 어휘에 없는 물리량·클래스	알 수 없는 태그입니다. 혹시 {후보}?
+DEVICE_QUERY_INVALID	400	DEV	검색식 구문·필드 오류	검색식 {열}번째 글자 근처가 올바르지 않습니다
+DEVICE_QUERY_TIMEOUT	400	DEV	5초 초과	검색이 너무 오래 걸립니다. 조건을 좁혀 주세요
+EXPORT_INVALID_REQUEST	400	DEV	결과 파일 전체가 스키마 검증 실패	내보낼 수 있는 항목이 없습니다
+GROUP_IN_USE	409	DEV	규칙·플로우·대시보드·권한이 참조하는 그룹 삭제	이 그룹을 쓰는 곳이 {n}곳 있어 삭제할 수 없습니다
+COMMISSION_CONFLICT	409	DEV	다른 사람이 먼저 설치	이 기기는 이미 {사람}이 {시각}에 설치했습니다
+DEVICE_NOT_CONTROLLABLE	409	ACT	기능·드라이버가 없는 기기	이 기기는 제어할 수 없습니다
+CAPABILITY_NOT_SUPPORTED	400	ACT	모델이 지원하지 않는 기능·명령	이 기기가 지원하지 않는 기능입니다
+COMMAND_ARGS_INVALID	400	ACT	인자 스키마 위반	명령 값이 올바르지 않습니다
+COMMAND_ARG_OUT_OF_RANGE	400	ACT	모델 제약 밖	{min}~{max} 사이로 설정하세요
+COMMAND_ABSOLUTE_LIMIT	400	ACT	조직 절대 한계 밖	조직 제한({min}~{max})을 넘었습니다
+COMMAND_RATE_LIMITED	429	ACT	최소 간격 안 반복(AUTO·SCHEDULE·AI 출처, 내부 API)	{n}초 후에 다시 시도하세요
+COMMAND_BLOCKED	409	ACT	인터락·진동·보호 한도(상세 reason)	{인터락 사유}
+ACT_SANDBOX_FORBIDDEN	403	ACT	샌드박스 공간 출처의 명령이 실제 기기를 대상으로 함(BR-ACT-23)	샌드박스에서는 실제 장비를 제어할 수 없습니다
+COMMAND_NOT_FOUND	404	ACT		명령을 찾을 수 없습니다
+COMMAND_NOT_CANCELLABLE	409	ACT	끝났거나 이미 전송된 명령 취소	취소할 수 없는 상태입니다
+COMMAND_BULK_LIMIT_EXCEEDED	400	ACT	일괄 500대 초과	한 번에 500대까지 제어할 수 있습니다
+SCENE_NOT_FOUND	404	ACT	없거나 다른 조직의 장면	장면을 찾을 수 없습니다
+SCENE_ITEM_LIMIT_EXCEEDED	400	ACT	항목 100 초과	장면 항목은 100개까지입니다
+SCHEDULE_INVALID	400	ACT	cron 오류, 기간 역전	일정이 올바르지 않습니다
+INTERLOCK_INVALID	400	ACT	조건·금지 대상 오류	인터락 설정이 올바르지 않습니다
+LIMIT_WIDER_THAN_MODEL	400	ACT	절대 한계가 모델보다 넓음	모델 범위보다 넓게 설정할 수 없습니다
+EMERGENCY_STOP_ACTIVE	409	ACT	같은 범위 이미 정지 중	이미 비상 정지 중입니다
+DRIVER_NOT_FOUND	404	ACT	없거나 다른 조직의 드라이버, action에 그 종류의 드라이버 구현이 없음	드라이버를 찾을 수 없습니다
+DRIVER_IN_USE	409	ACT	모델에 연결된 드라이버 삭제	사용 중인 드라이버입니다
+DRIVER_CONTRACT_FAILED	502	ACT	계약 테스트 실패	드라이버 검증에 실패했습니다
+DRIVER_HEALTHCHECK_FAILED	502	ACT	연결 확인 실패(원인)	드라이버에 연결할 수 없습니다: {원인}
+DRIVER_CAPABILITY_MISMATCH	400	ACT	모델 기능 미지원 드라이버 연결	이 드라이버는 {capability}를 지원하지 않습니다
+CAPABILITY_NAME_RESERVED	409	ACT	표준 이름 사용	표준 기능 이름은 쓸 수 없습니다
+TSD_RANGE_TOO_LARGE	400	TSD	원본 31일 초과 등	원본 데이터는 한 번에 31일까지 조회할 수 있습니다. 집계 단위를 고르거나 내보내기를 이용하세요
+TSD_TOO_MANY_SERIES	400	TSD	기기 × 측정 항목 50개 초과	한 번에 50개 시계열까지 비교할 수 있습니다
+TSD_RESOLUTION_UNAVAILABLE	400	TSD	요청 단위가 보관 기간 밖	이 기간에는 {단위} 데이터가 보관되어 있지 않습니다
+TSD_INVALID_AGG	400	TSD	측정 항목에 맞지 않는 집계 함수	이 측정 항목에는 {함수}를 쓸 수 없습니다
+TSD_RATE_LIMITED	429	TSD	호출 한도	요청이 너무 많습니다. 잠시 후 다시 시도하세요
+EXPORT_NOT_FOUND	404	TSD		내보내기 작업을 찾을 수 없습니다
+EXPORT_EXPIRED	410	TSD	7일 지난 파일	파일 보관 기간이 지났습니다. 다시 내보내세요
+EXPORT_LIMIT_EXCEEDED	429	TSD	동시 비동기 작업 사용자당 3개	진행 중인 내보내기가 끝난 뒤 다시 시도하세요
+IMPORT_NOT_FOUND	404	TSD		가져오기 작업을 찾을 수 없습니다
+IMPORT_FILE_INVALID	400	TSD	CSV 형식·인코딩·헤더 오류	파일 형식이 올바르지 않습니다: {줄, 사유}
+IMPORT_SOURCE_UNREACHABLE	502	TSD	InfluxDB 접속 실패	외부 저장소에 연결하지 못했습니다: {원인}
+IMPORT_LIMIT_EXCEEDED	400	TSD	5,000만 행·2GB 초과	한 번에 가져올 수 있는 양을 넘었습니다
+RETENTION_CONFIRM_REQUIRED	409	TSD	보관 기간 단축 확인 누락	줄어드는 기간 때문에 {n}행이 삭제됩니다. 확인 후 저장하세요
+RETENTION_INVALID	400	TSD	범위 위반	보관 기간이 허용 범위를 벗어났습니다
+ARCHIVE_NOT_FOUND	404	TSD		보관 파일을 찾을 수 없습니다
+ANNOTATION_FORBIDDEN	403	TSD	남의 수동 주석 삭제	작성자나 관리자만 지울 수 있습니다
+BI_FEATURE_DISABLED	409	TSD	조직에 BI 기능 꺼짐	BI 연동 기능이 켜져 있지 않습니다
+EXPORT_TARGET_UNWRITABLE	502	TSD	S3·SFTP 쓰기 실패	대상에 파일을 쓸 수 없습니다: {원인}
+FEED_TOKEN_INVALID	401	TSD	만료·폐기·다른 피드 토큰	피드 토큰이 유효하지 않습니다
+FEED_RESOLUTION_NOT_ALLOWED	400	TSD	1시간 미만 해상도	피드는 1시간·1일 집계만 제공합니다
+RULE_NOT_FOUND	404	RUL	없거나 권한 밖 규칙	규칙을 찾을 수 없습니다
+RULE_NAME_DUPLICATED	409	RUL	이름 중복	같은 이름의 규칙이 있습니다
+RULE_CONDITION_INVALID	400	RUL	조건 형식·값·해제 기준 오류	조건이 올바르지 않습니다: {상세}
+RULE_LIMIT_EXCEEDED	409	RUL	규칙 1,000개 초과	규칙은 1,000개까지 만들 수 있습니다
+RULE_TARGET_LIMIT_EXCEEDED	400	RUL	대상 5,000대 초과	대상 기기는 5,000대까지입니다
+RULE_STATE_CONFLICT	409	RUL	CONVERTED 규칙 수정 등	지금 상태에서는 할 수 없습니다
+RULE_SIMULATION_RANGE_INVALID	400	RUL	기간 30일 초과	시뮬레이션 기간은 30일까지입니다
+ALARM_NOT_FOUND	404	RUL		알람을 찾을 수 없습니다
+ALARM_STATE_CONFLICT	409	RUL	허용되지 않은 상태 변경	이미 처리된 알람입니다
+ALARM_BULK_LIMIT_EXCEEDED	400	RUL	일괄 200건 초과	한 번에 200건까지 처리할 수 있습니다
+POLICY_NOT_FOUND	404	RUL	쓰는 규칙이 있는 정책 삭제	사용 중인 정책입니다
+POLICY_IN_USE	409	RUL	쓰는 규칙이 있는 정책 삭제	사용 중인 정책입니다
+CHANNEL_NOT_CONFIGURED	409	RUL	연결되지 않은 채널 선택	{채널}이 설정되지 않았습니다
+MESSENGER_NOT_LINKED	403	RUL	메신저 응답 계정 미연결	계정 연결이 필요합니다
+CALLBACK_REJECTED	401	RUL	메신저 콜백 검증 실패(API-RUL-31, 채널 SPI `verify`: 텔레그램 시크릿 토큰 헤더 불일치·없음)	(메신저 서버 응답, 화면 표시 없음)
+SILENCE_RANGE_INVALID	400	RUL	끝이 시작보다 이름 등	무음 기간이 올바르지 않습니다
+FLOW_NOT_FOUND	404	FLW	없거나 권한 밖 플로우	플로우를 찾을 수 없습니다
+FLOW_NAME_DUPLICATED	409	FLW	같은 이름 존재	같은 이름의 플로우가 있습니다
+FLOW_VALIDATION_FAILED	400	FLW	적용 전 검증 실패. 응답 `errors[{field, code, message}]`(api-rules §5): field=`nodes[<노드 ID>].config.<경로>`·`wires[<순번>]` 등(FLW-api API-FLW-06), code=CYCLE, UNCONNECTED, TYPE_MISMATCH, INVALID_CONFIG, NO_TRIGGER, UNKNOWN_NODE_TYPE, UNKNOWN_PORT, INVALID_DEFINITION, SUBFLOW_RECURSION, TARGET_MISSING, CONTROL_BYPASS, LIMIT	적용할 수 없습니다. 검증 결과를 확인하세요
+FLOW_VERSION_CONFLICT	409	FLW	기준 버전이 현재와 다름	다른 사람이 먼저 변경했습니다. 차이를 확인하세요
+FLOW_STATE_CONFLICT	409	FLW	허용되지 않은 상태 변경	지금 상태에서는 할 수 없습니다
+FLOW_SHADOW_IN_PROGRESS	409	FLW	섀도우 실행 중 다른 적용	섀도우 비교가 끝난 뒤 적용하세요
+FLOW_APPROVAL_REQUIRED	202	FLW	승인 대기로 접수됨(오류가 아니라 결과 코드)	승인 요청을 보냈습니다
+FLOW_PROMOTION_BLOCKED	409	FLW	대상 미매핑(`reason=UNMAPPED`), 시나리오 실패(`reason=SCENARIO_FAILED`)	승격 조건을 만족하지 않습니다
+FLOW_LIMIT_EXCEEDED	409	FLW	조직 활성 플로우 500 초과	활성 플로우 한도(500)를 넘었습니다
+FLOW_NODE_LIMIT_EXCEEDED	400	FLW	노드 200 초과	플로우당 노드는 200개까지입니다
+FLOW_DEFINITION_TOO_LARGE	413	FLW	정의 2MB 초과, JS 64KB 초과	플로우가 너무 큽니다
+FLOW_IMPORT_INVALID	400	FLW	가져오기 형식 오류, 알 수 없는 노드	가져올 수 없는 파일입니다
+FLOW_TEST_INPUT_INVALID	400	FLW	시험 입력이 표준 메시지가 아님	입력 형식이 올바르지 않습니다
+FLOW_REPLAY_TOO_LARGE	400	FLW	재생 데이터 100만 건 초과·7일 초과	기간을 줄여 주세요
+FLOW_TEMPLATE_NOT_FOUND	404	FLW	없거나 비활성인 플로우 템플릿으로 초안 생성(ENE 절감 기회 등)	플로우 템플릿을 찾을 수 없습니다
+SUBFLOW_IN_USE	409	FLW	쓰는 플로우가 있는 서브플로우 삭제	사용 중인 서브플로우입니다
+SINK_CONNECTION_IN_USE	409	FLW	쓰는 플로우가 있는 연결 삭제	사용 중인 연결입니다
+SINK_CONNECTION_TEST_FAILED	502	FLW	연결 테스트 실패(원인: AUTH, DNS, TLS, TIMEOUT)	연결할 수 없습니다: {원인}
+SNAPSHOT_NAME_DUPLICATED	409	FLW	같은 이름 스냅샷	같은 이름의 스냅샷이 있습니다
+SNAPSHOT_DEPENDENCY_MISSING	409	FLW	복원할 스냅샷의 스크립트·서브플로우 버전 없음	스냅샷에 필요한 항목이 없어 복원할 수 없습니다
+FLOW_PROMOTION_SELF_APPROVAL	403	FLW	요청자 본인 승인	본인이 요청한 승격은 승인할 수 없습니다
+GIT_SYNC_CONFLICT	409	FLW	충돌 선택 없이 가져오기 적용	충돌을 먼저 해결하세요
+GIT_SYNC_REPO_UNREACHABLE	502	FLW	저장소 연결·인증 실패	저장소에 연결할 수 없습니다: {원인}
+NODE_PACKAGE_SIGNATURE_INVALID	400	FLW	서명 없음·신뢰하지 않는 서명자	서명을 확인할 수 없는 패키지입니다
+NODE_PACKAGE_LICENSE_REJECTED	400	FLW	금지 라이선스	라이선스 정책에 맞지 않는 패키지입니다
+NODE_PACKAGE_INVALID	400	FLW	매니페스트·스키마 오류	패키지 형식이 올바르지 않습니다
+FLOW_OWNER_INVALID	400	FLW	비활성 사용자를 책임자로 지정	활성 사용자만 책임자로 지정할 수 있습니다
+FLOW_METRICS_UNAVAILABLE	503	FLW	엔진 지표 API(FLW-05.05, M4)가 아직 없거나 엔진이 응답하지 않음	플로우 지표를 아직 제공하지 않습니다
+ANALYTICS_UNAVAILABLE	503	ANA	분석 서비스 응답 없음	분석 서비스에 잠시 연결할 수 없습니다. 잠시 후 다시 시도하세요
+TEMPLATE_NOT_FOUND	404	ANA	없거나 비활성 템플릿	템플릿을 찾을 수 없습니다
+TEMPLATE_DISABLED	409	ANA	비활성 템플릿으로 실행	비활성화된 템플릿입니다
+ANALYSIS_NOT_FOUND	404	ANA	없거나 권한 밖 분석	분석을 찾을 수 없습니다
+ANALYSIS_BINDING_INVALID	400	ANA	역할 개수·의미 조건 위반	{role} 역할에 {min}~{max}개의 {semantic} 데이터를 연결하세요
+ANALYSIS_PARAMS_INVALID	400	ANA	파라미터 스키마 위반	입력값을 확인하세요: {field}
+ANALYSIS_INSUFFICIENT_DATA	409	ANA	충분성 FAIL	데이터가 부족합니다: {reason}
+ANALYSIS_WARNING_NOT_ACKNOWLEDGED	400	ANA	WARN을 확인하지 않고 실행	데이터 경고를 확인한 뒤 실행하세요
+ANALYSIS_LIMIT_EXCEEDED	409	ANA	시계열 50개·500만 포인트 초과	데이터가 너무 많습니다. 집계 단위를 {suggest} 이상으로 올리세요
+ANALYSIS_TIMEOUT	408	ANA	실행 시간 초과 (run 상태)	분석 시간이 초과되었습니다. 기간을 줄이거나 집계 단위를 올리세요
+ANALYSIS_RUN_NOT_FOUND	404	ANA		실행 기록을 찾을 수 없습니다
+ANALYSIS_RUN_STATE_CONFLICT	409	ANA	끝난 실행 취소 등	이미 끝난 실행입니다
+ANALYSIS_MODEL_REQUIRED	409	ANA	학습형인데 ACTIVE 모델 없음	먼저 모델을 학습하세요
+ANALYSIS_REALTIME_NOT_SUPPORTED	400	ANA	실시간 미지원 템플릿	이 템플릿은 실시간 적용을 지원하지 않습니다
+ML_MODEL_NOT_FOUND	404	ANA	분석 모델(ML)이 없거나 다른 조직	분석 모델을 찾을 수 없습니다
+MODEL_WORSE_THAN_ACTIVE	409	ANA	더 나쁜 모델을 강제 적용하지 않고 적용 요청	현재 모델보다 성능이 낮습니다. 강제 적용하려면 확인하세요
+ANALYSIS_SCHEDULE_INVALID	400	ANA	cron 식·프리셋 오류	일정 형식이 올바르지 않습니다
+DATASET_NOT_FOUND	404	ANA		데이터셋을 찾을 수 없습니다
+INTERVENTION_POINT_REQUIRED	400	ANA	개입 시점 없음	개입 시점을 지정하세요
+ANALYSIS_EXPORT_TOO_LARGE	409	ANA	내보내기 행 수 초과	내보낼 데이터가 너무 많습니다. 기간을 줄이세요
+AI_DISABLED	409	AIA	조직 AI 기능 꺼짐	AI 기능이 꺼져 있습니다
+AI_QUOTA_EXCEEDED	429	AIA	한도 초과	오늘 AI 사용 한도를 다 썼습니다
+AI_PROVIDER_UNAVAILABLE	503	AIA	LLM 제공자 장애	AI 서비스에 잠시 연결할 수 없습니다
+AI_CONVERSATION_NOT_FOUND	404	AIA		대화를 찾을 수 없습니다
+AI_COMMENTARY_SUBJECT_INVALID	400	AIA	성공하지 않은 실행에 해설 요청	성공한 결과에만 해설을 만들 수 있습니다
+REPORT_SCHEDULE_INVALID	400	AIA	섹션 없음, 범위 없음	리포트 설정을 확인하세요: {field}
+REPORT_NOT_FOUND	404	AIA	없거나 범위 밖	리포트를 찾을 수 없습니다
+AI_SUGGESTION_EXPIRED	409	AIA	만료된 제안 승인	제안이 만료되었습니다
+AI_SUGGESTION_STATE_CONFLICT	409	AIA	이미 처리된 제안	이미 처리된 제안입니다
+AI_EVAL_BELOW_THRESHOLD	409	AIA	평가 기준 미달 모델 적용	평가 정확도가 기준({threshold}) 미만입니다
+AI_CONFIRMATION_ALREADY_USED	409	AIA	이미 쓴 확인 카드 토큰(1회용)	이미 실행한 요청입니다
+AI_CONFIRMATION_EXPIRED	410	AIA	5분이 지난 확인 카드 토큰	확인 시간이 지났습니다. 다시 요청하세요
+MCP_RATE_LIMITED	429	AIA	분당 60회 초과	요청이 너무 많습니다. {retryAfter}초 후 다시 시도하세요
+SIM_DEVICE_QUOTA_EXCEEDED	409	SIM	가상 기기 500대 초과	가상 기기 한도를 넘습니다
+SIM_CONCURRENT_RUN_LIMIT	409	SIM	동시 실행 5개 초과	동시에 실행할 수 있는 시나리오는 5개입니다
+SIM_ACCELERATION_LIMIT	409	SIM	x60에서 기기 100대 초과	기기가 많아 이 가속으로 실행할 수 없습니다
+SIM_SPACE_BUSY	409	SIM	같은 공간에 실행 중 시나리오	이 공간에서 이미 시나리오가 실행 중입니다
+SIM_RUN_STATE_CONFLICT	409	SIM	허용되지 않은 상태 전이	지금 상태에서는 할 수 없는 동작입니다
+SIM_TARGET_NOT_VIRTUAL	400	SIM	실제 기기에 장애 주입·재생	가상 기기에만 할 수 있습니다
+SIM_PROFILE_IN_USE	409	SIM	사용 중 프로필 삭제	사용 중인 프로필입니다
+SIM_TYPE_IN_USE	409	SIM	사용 중 유형 삭제	사용 중인 유형입니다
+SIM_PROPERTY_OUT_OF_RANGE	400	SIM	특성 범위 밖	허용 범위를 벗어난 값입니다
+SIM_PLATFORM_BROKER_UNAVAILABLE	409	SIM	플랫폼 브로커 미설정	플랫폼 브로커가 설정되지 않았습니다
+SIM_WEATHER_DATA_MISSING	409	SIM	날씨 기간 데이터 없음	해당 기간 날씨 데이터가 없습니다
+SIM_IMPORT_INVALID	400	SIM	가져오기 파일 오류	파일 형식이 올바르지 않습니다
+SIM_SCENARIO_INVALID	400	SIM	이벤트 범위·참조 오류	시나리오 설정이 올바르지 않습니다
+SIM_SANDBOX_VIOLATION	403	SIM	샌드박스 정책 위반	샌드박스에서는 할 수 없는 동작입니다
+SIM_NOT_FOUND	404	SIM	없거나 권한 밖	대상을 찾을 수 없습니다
+DASHBOARD_NOT_FOUND	404	DSH	없거나 권한 밖	대시보드를 찾을 수 없습니다
+DASHBOARD_VERSION_CONFLICT	409	DSH	낙관적 잠금 충돌	다른 사용자가 먼저 저장했습니다
+DASHBOARD_LAYOUT_INVALID	400	DSH	위젯 겹침, 격자 범위 밖, 위젯 수 초과	위젯 배치가 올바르지 않습니다: {reason}
+WIDGET_TYPE_UNSUPPORTED	400	DSH	알 수 없는 위젯 타입	지원하지 않는 위젯입니다
+WIDGET_QUERY_INVALID	400	DSH	대상 없음, 시계열 수 초과	위젯 데이터 설정을 확인하세요
+WIDGET_DATA_FORBIDDEN	403	DSH	권한 밖 데이터(공유 대시보드)	접근 권한이 없는 데이터입니다
+SHARE_LINK_INVALID	404	DSH	없거나 만료·폐기	유효하지 않은 링크입니다
+NOTIFICATION_NOT_FOUND	404	DSH		알림을 찾을 수 없습니다
+ONBOARDING_ALREADY_COMPLETED	409	DSH		이미 시작하기를 마쳤습니다
+MODEL_FILE_INVALID	400	DSH	IFC가 아니거나 200MB 초과	200MB 이하 IFC 파일만 올릴 수 있습니다
+BRANDING_ASSET_INVALID	400	DSH	브랜딩 자산 형식·크기·안전성 위반	로고는 1MB 이하 PNG 또는 안전한 SVG여야 합니다
+SETTING_INVALID	400	OPS	설정값 형식·범위 오류	설정값이 올바르지 않습니다: {필드}
+EXTERNAL_SERVICE_TEST_FAILED	502	OPS	연결 테스트 실패(인증, DNS, TLS, 시간 초과)	연결하지 못했습니다: {원인}
+CHANNEL_NOT_FOUND	404	OPS		알림 채널을 찾을 수 없습니다
+CHANNEL_IN_USE	409	OPS	규칙·플로우가 사용 중인 채널 삭제	이 채널을 쓰는 규칙·플로우가 있어 삭제할 수 없습니다({n}개)
+CHANNEL_TEST_FAILED	502	OPS	테스트 발송 실패	테스트 발송에 실패했습니다: {원인}
+RETENTION_BELOW_MINIMUM	400	OPS	최소값 미만	{종류}의 보관 기간은 최소 {n}일입니다
+MAINTENANCE_OVERLAP	409	OPS	같은 대상 겹치는 구간	같은 대상에 겹치는 유지보수 일정이 있습니다
+MAINTENANCE_RANGE_INVALID	400	OPS	종료 ≤ 시작, 30일 초과	유지보수 기간이 올바르지 않습니다
+BACKUP_IN_PROGRESS	409	OPS	실행 중 백업 존재	백업이 이미 진행 중입니다
+BACKUP_NOT_FOUND	404	OPS		백업을 찾을 수 없습니다
+CONFIG_BUNDLE_INVALID	400	OPS	형식·서명·버전 불일치	설정 파일을 읽을 수 없습니다: {사유}
+CONFIG_APPLY_FAILED	500	OPS	적용 중 실패, 전체 되돌림	설정을 적용하지 못해 모두 되돌렸습니다: {사유}
+WEBHOOK_URL_INVALID	400	OPS	https 아님, 내부망 주소(SSRF 방지)	사용할 수 없는 주소입니다
+WEBHOOK_NOT_FOUND	404	OPS		Webhook을 찾을 수 없습니다
+LICENSE_INVALID	400	OPS	서명 검증 실패·만료	라이선스 키가 올바르지 않습니다
+RELEASE_NOTE_VERSION_DUPLICATED	409	OPS	같은 버전의 노트가 이미 있음	이미 {version} 릴리스 노트가 있습니다
+RELEASE_NOTE_NOT_FOUND	404	OPS	없거나 게시되지 않은 노트	릴리스 노트를 찾을 수 없습니다
+RELEASE_NOTE_STATE_CONFLICT	409	OPS	게시된 노트 삭제, 이미 게시된 노트 게시	게시된 릴리스 노트는 삭제할 수 없습니다. 먼저 게시를 취소해 주세요
+LIMIT_EXCEEDED	409	OPS	NFR-11.01 한도 초과 생성	{대상} 한도({n})를 넘었습니다
+FEATURE_FLAG_NOT_FOUND	404	OPS		기능 플래그를 찾을 수 없습니다
+DIAGNOSTIC_SECRET_DETECTED	409	OPS	진단 묶음 점검 실패	민감 정보가 포함되어 진단 묶음을 만들 수 없습니다
+METRICS_UNAVAILABLE	503	OPS	지표 저장소(Prometheus) 조회 실패	지표를 지금 불러올 수 없습니다. 잠시 후 다시 시도해 주세요
+TRACE_NOT_FOUND	404	OPS	추적 ID가 없거나 보관 기간이 지남	해당 추적 기록을 찾을 수 없습니다
+CMP_PROFILE_NOT_FOUND	404	CMP	없거나 권한 밖 프로필	기준 프로필을 찾을 수 없습니다
+CMP_PROFILE_READ_ONLY	409	CMP	시스템 프로필·잠긴 버전 수정	이 기준은 수정할 수 없습니다. 복제하거나 새 버전으로 저장하세요
+CMP_PROFILE_NAME_DUPLICATE	409	CMP	이름 중복	같은 이름의 프로필이 있습니다
+CMP_PROFILE_VERSION_CONFLICT	409	CMP	낙관적 잠금 충돌	다른 사용자가 먼저 수정했습니다
+CMP_THRESHOLD_INVALID	400	CMP	하한 > 상한, 등급 구간 겹침, 단위 불일치	기준값을 확인하세요
+CMP_FACILITY_TYPE_REQUIRED	400	CMP	국내법 프로필 적용·리포트에 시설 유형 없음	시설 유형을 선택하세요
+CMP_APPLICATION_DUPLICATE	409	CMP	같은 대상에 중복 적용	이미 적용되어 있습니다
+CMP_APPLICATION_NOT_FOUND	404	CMP		적용 정보를 찾을 수 없습니다
+CMP_PROFILE_NOT_APPLIED	409	CMP	리포트 대상 공간에 프로필 미적용	선택한 공간에 해당 기준이 적용되어 있지 않습니다
+CMP_VIRTUAL_DATA_NOT_ALLOWED	409	CMP	가상 데이터만 있는 공간	가상 데이터만 있어 리포트를 만들 수 없습니다
+CMP_REPORT_PERIOD_INVALID	400	CMP	기간 > 400일, 미래, 역순	기간을 확인하세요
+CMP_REPORT_NOT_FOUND	404	CMP		리포트를 찾을 수 없습니다
+CMP_REPORT_STATE_CONFLICT	409	CMP	DRAFT 아닌 판 발행, PUBLISHED 수정	이미 발행되었거나 생성 중입니다
+CMP_SCHEDULE_INVALID	400	CMP	주기·일·수신자 오류	정기 발행 설정을 확인하세요
+CMP_ACTION_INVALID	400	CMP	조치 시각이 이탈 이전 등	조치 정보를 확인하세요
+OCC_PUBLIC_LINK_INVALID	404	OCC	토큰 없음·무효·폐기·만료(공통)	사용할 수 없는 링크입니다
+OCC_PUBLIC_IP_NOT_ALLOWED	403	OCC	IP 허용 목록 밖	이 화면은 지정된 장소에서만 볼 수 있습니다
+OCC_FEATURE_DISABLED	404	OCC	공간에서 꺼진 기능	이 공간에서는 사용할 수 없는 기능입니다
+OCC_FEEDBACK_RATE_LIMITED	429	OCC	피드백 한도 초과	잠시 후 다시 보내 주세요
+OCC_CHALLENGE_REQUIRED	429	OCC	작업 증명 필요(`response.challenge`)	확인 중입니다…
+OCC_FEEDBACK_INVALID	400	OCC	유형 없음·의견 길이·사진 형식	입력을 확인해 주세요
+OCC_PHOTO_TOO_LARGE	413	OCC	사진 > 5MB	5MB 이하 사진만 올릴 수 있어요
+OCC_SUBSCRIPTION_INVALID	400	OCC	이메일 형식, 동의 없음, 항목 없음	입력을 확인해 주세요
+OCC_SUBSCRIPTION_LINK_EXPIRED	410	OCC	확인·해지·연장 링크 만료	링크가 만료되었습니다
+OCC_PUSH_NOT_SUPPORTED	400	OCC	푸시 구독 정보 형식 오류	이 브라우저에서는 알림을 받을 수 없어요. 이메일을 이용해 주세요
+OCC_DISPLAY_INVALID	400	OCC	공간 0개·21개 이상, 만료일 > 1년, CIDR 오류	공개 화면 설정을 확인하세요
+OCC_DISPLAY_NOT_FOUND	404	OCC	관리 API에서 없는 공개 화면	공개 화면을 찾을 수 없습니다
+OCC_BUNDLE_NOT_FOUND	404	OCC		피드백 묶음을 찾을 수 없습니다
+OCC_BOOKING_AUTH_FAILED	400	OCC	공급자 인증 실패·권한 부족(`response.missingScopes`)	예약 시스템 인증에 실패했습니다. 필요한 권한을 확인하세요
+OCC_BOOKING_PROVIDER_ERROR	502	OCC	공급자 API 오류·시간 초과	예약 시스템에 연결할 수 없습니다
+OCC_BOOKING_MAPPING_CONFLICT	409	OCC	이미 다른 리소스와 연결된 공간	이미 다른 리소스와 연결된 공간입니다
+OCC_AUTO_RELEASE_NOT_ALLOWED	409	OCC	읽기 권한 연동에서 자동 반납 켜기	자동 반납에는 쓰기 권한 연동이 필요합니다
+ENE_RATE_PERIOD_OVERLAP	409	ENE	단가·계수 기간 겹침	기간이 겹칩니다
+ENE_EMISSION_FACTOR_SYSTEM_READONLY	409	ENE	시스템 기본 배출계수 행을 수정·삭제하려 함	시스템 기본 배출계수는 바꿀 수 없습니다. 조직 계수를 새 기간으로 추가하세요
+ENE_RATE_INVALID	400	ENE	TOU 24시간 미커버, 단가 ≤ 0	요금 설정을 확인하세요
+ENE_SOURCE_CONFLICT	409	ENE	같은 계량기를 두 공간에 연결, 이중 합산 구성	이미 다른 공간에 연결된 계량기입니다
+ENE_SOURCE_METRIC_INVALID	400	ENE	`energy`/`power`가 아닌 측정 항목	에너지 측정 항목이 아닙니다
+ENE_BILL_DUPLICATE	409	ENE	같은 달 고지서(덮어쓰기 확인 필요)	이미 입력된 달입니다
+ENE_BASELINE_INSUFFICIENT_DATA	409	ENE	30일 미만(`response.neededDays`)	기준선을 만들려면 데이터가 더 필요합니다
+ENE_BASELINE_NOT_READY	409	ENE	READY 아닌 버전 활성화	계산이 끝난 기준선만 활성화할 수 있습니다
+ENE_SPACE_VOLUME_REQUIRED	409	ENE	면적·층고 없음	공간 면적과 층고를 입력하세요
+ENE_VIRTUAL_SENSOR_INPUT_MISSING	409	ENE	입력 신호 부족	필요한 센서가 없습니다
+ENE_OPPORTUNITY_NOT_FOUND	404	ENE		절감 기회를 찾을 수 없습니다
+ENE_OPPORTUNITY_STATE_CONFLICT	409	ENE	허용되지 않은 상태 전이	현재 상태에서는 할 수 없는 작업입니다
+ENE_FDD_RULE_NOT_FOUND	404	ENE		진단 규칙을 찾을 수 없습니다
+ENE_FDD_PARAM_OUT_OF_RANGE	400	ENE	임계값 범위 밖	허용 범위를 벗어났습니다
+ENE_INSIGHT_NOT_FOUND	404	ENE		진단 결과를 찾을 수 없습니다
+ENE_INSIGHT_STATE_CONFLICT	409	ENE		현재 상태에서는 할 수 없는 작업입니다

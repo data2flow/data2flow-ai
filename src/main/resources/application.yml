@@ -9,6 +9,63 @@ spring:
       enabled: true
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  # 기준 저장소: s3 공용 PostgreSQL DB data2flow, 스키마 data2flow_ai(ADR-019). 값은 환경변수(.env / k8s Secret)
+  datasource:
+    url: jdbc:postgresql://${DATA2FLOW_DB_HOST:localhost}:${DATA2FLOW_DB_PORT:5432}/${DATA2FLOW_DB_NAME:data2flow}?ApplicationName=data2flow-ai
+    username: ${DATA2FLOW_DB_USERNAME:data2flow}
+    password: ${DATA2FLOW_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      connection-init-sql: SET TIME ZONE 'UTC'
+  flyway:
+    schemas: data2flow_ai
+    default-schema: data2flow_ai
+    create-schemas: true
+  # RabbitMQ(s4, vhost: prod data2flow · staging data2flow-stg · local data2flow-dev). 이벤트 소비를 켤 때만 연결한다
+  rabbitmq:
+    host: ${DATA2FLOW_RABBITMQ_HOST:localhost}
+    port: ${DATA2FLOW_RABBITMQ_PORT:5672}
+    virtual-host: ${DATA2FLOW_RABBITMQ_VHOST:data2flow-dev}
+    username: ${DATA2FLOW_RABBITMQ_USERNAME:guest}
+    password: ${DATA2FLOW_RABBITMQ_PASSWORD:guest}
+    connection-timeout: 5s
+  # 사용량 한도·MCP 호출 한도 카운터(ADR-022: 캐시 전용, 키 접두사 data2flow:). 없어도 기동하고 파드별 메모리로 대신한다
+  data:
+    redis:
+      host: ${DATA2FLOW_REDIS_HOST:localhost}
+      port: ${DATA2FLOW_REDIS_PORT:6379}
+      username: ${DATA2FLOW_REDIS_USERNAME:}
+      password: ${DATA2FLOW_REDIS_PASSWORD:}
+      database: ${DATA2FLOW_REDIS_DATABASE:0}
+      timeout: 500ms
+      connect-timeout: 1s
+      repositories:
+        enabled: false
+  messages:
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+  # MCP 서버(AIA-08.01): 무상태 Streamable HTTP, 경로 /mcp. 도구는 코드(McpTools)로 등록하고 범위로 거른다
+  ai:
+    mcp:
+      server:
+        name: data2flow
+        version: 1.0.0
+        protocol: STATELESS
+        type: SYNC
+        request-timeout: 120s
+        annotation-scanner:
+          enabled: false
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        instructions: |
+          data2flow 플랫폼(공간 환경 센서·자동화·분석)의 읽기 도구다. 도구 버전은 v1이고 변경 내역은 도구 목록 화면(UI-AIA-07)에 버전과 함께 나온다.
+          모든 도구는 토큰 소유자의 권한과 공간 범위, 토큰 범위로만 조회한다. 권한 밖 공간은 결과에 나오지 않는다.
+          숫자는 도구 결과의 값만 인용하고 지어내지 않는다. 결과가 1,000행을 넘으면 summary와 nextCursor를 쓴다.
+          장비 제어·배포·회원·토큰 관리 도구는 없다.
 server:
   port: 8080
   shutdown: graceful
@@ -25,6 +82,43 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # RabbitMQ·Redis는 없어도 AI 서비스는 응답한다(readiness에 넣지 않음)
+    rabbit:
+      enabled: false
+    redis:
+      enabled: false
   metrics:
     tags:
       application: ${spring.application.name}
+
+data2flow:
+  ai:
+    # ADR-030: DB를 staging·prod가 함께 쓰므로 migrate는 staging 배포에서만(application-staging.yml)
+    flyway-mode: validate
+    core-uri: ${DATA2FLOW_CORE_URI:http://data2flow-core-api}
+    analytics-uri: ${DATA2FLOW_ANALYTICS_URI:http://data2flow-analytics}
+    pipeline-uri: ${DATA2FLOW_PIPELINE_BASE_URL:http://data2flow-pipeline}
+    web-base-url: ${DATA2FLOW_WEB_BASE_URL:https://data2flow.java21.net}
+    zone: Asia/Seoul
+    llm:
+      # 키가 없으면 NONE(수치 요약 템플릿으로 대체, AIA-07.05). FAKE는 개발·시험·시연용
+      default-provider: ${DATA2FLOW_AI_DEFAULT_PROVIDER:NONE}
+      default-model: ${DATA2FLOW_AI_DEFAULT_MODEL:claude-opus-5-5}
+      allowed-providers: ${DATA2FLOW_AI_ALLOWED_PROVIDERS:NONE,ANTHROPIC}
+      timeout: 60s
+      anthropic:
+        # 비밀값: k8s Secret data2flow-ai-llm(anthropic-api-key, 선택) → 환경변수. 비어 있으면 "준비 중"
+        api-key: ${DATA2FLOW_AI_ANTHROPIC_API_KEY:}
+        base-url: ${DATA2FLOW_AI_ANTHROPIC_BASE_URL:https://api.anthropic.com}
+        model: claude-opus-5-5
+      # 추정 비용(USD/100만 토큰, 입력:출력). 화면 사용량의 costEstimate
+      price-per-million:
+        "[claude-opus-5-5]": "4:20"
+        "[claude-sonnet-5-5]": "2:10"
+        "[claude-haiku-4-5]": "1:5"
+    mcp:
+      calls-per-minute: 60
+      max-rows: 1000
+    events:
+      enabled: ${DATA2FLOW_AI_EVENTS_ENABLED:false}

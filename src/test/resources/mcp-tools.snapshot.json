@@ -1,0 +1,46 @@
+{
+  "aggregate_telemetry" : {
+    "hash" : "924e0a0f105db80ac9545c746b0d3a13aed513e8642da0a4e97f5acb9b0ec348",
+    "version" : "v1"
+  },
+  "get_analysis_result" : {
+    "hash" : "68df5f5561880fc2dc59688ec6ba60dece44d78a0ac64e4d624a26cb5dd982df",
+    "version" : "v1"
+  },
+  "get_device" : {
+    "hash" : "b2d08d4bec1080d45123acac2690fb3c1994290fe58e62e34cbc303a23bd1481",
+    "version" : "v1"
+  },
+  "get_flow_status" : {
+    "hash" : "c5b501e0467dce224e654769aad2b0c4b312cc7c502adc86afca53f5af7f4dc7",
+    "version" : "v1"
+  },
+  "get_space" : {
+    "hash" : "7e583a995c8d315e69c5793dc96770b619d60b5d930315f9261804b7df372be8",
+    "version" : "v1"
+  },
+  "list_alarms" : {
+    "hash" : "400d6aeed7a2a70cf2582e44f278cd05324d84da503903361cfb5d2cbffb2f77",
+    "version" : "v1"
+  },
+  "list_analysis_templates" : {
+    "hash" : "08975eb3e84fe260fd449b837a2dab7e518e8fedf9b9aa833c9272151b569f8a",
+    "version" : "v1"
+  },
+  "list_devices" : {
+    "hash" : "2ab0c9f70024dd54a0b0663ced823439a44137590f47e491b7d405fe6c79e3e9",
+    "version" : "v1"
+  },
+  "list_flows" : {
+    "hash" : "936e6ce59d58fe4ccf3dfd63f05bb43aecf2bbeecc93ba3cd0ab817a8074d2b4",
+    "version" : "v1"
+  },
+  "list_spaces" : {
+    "hash" : "1a966cbabaad4d1da74ef7869ac4e2066196589f609a77180fbbf0d61fa030aa",
+    "version" : "v1"
+  },
+  "query_telemetry" : {
+    "hash" : "451c3fbc58da56b6585c7952fa3ec7c2f66d9e8d15ac242f90a7b42aec10371a",
+    "version" : "v1"
+  }
+}
