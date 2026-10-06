@@ -109,7 +109,8 @@ public class CoreClient implements AuditRecorder {
     public void record(AuditEvent event) {
         auditExecutor.execute(() -> {
             try {
-                http.postNoContent(Map.of(DataflowHeaders.ORG_ID, Long.toString(event.organizationId())), "/internal/core/audit-logs", event);
+                // 조직은 본문(organizationId)으로 넘긴다. X-ORG-ID만 있고 X-USER-ID가 없으면 core 신원 필터가 401로 거절해 감사가 사라진다
+                http.postNoContent(Map.of(), "/internal/core/audit-logs", event);
             } catch (RuntimeException e) {
                 log.warn("감사 기록 전송 실패 action={}", event.action(), e);
             }

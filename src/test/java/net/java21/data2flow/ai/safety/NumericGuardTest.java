@@ -77,7 +77,10 @@ class NumericGuardTest {
             "36000|3.1만 명|false",
             "-0.5|−0.5도|true",
             "0.5|−0.5도|false",
-            "40320|40,320점|true"})
+            "40320|40,320점|true",
+            "1098.2916666666667|가장 높은 칸 값은 1098.2916666666667입니다|true",
+            "1098.2916666666667|가장 높은 칸 값은 1098.2916666666668입니다|false",
+            "1098.2916666666667|약 1,098.3ppm|true"})
     void match(String input, String text, boolean ok) {
         NumericGuard.Verification v = NumericGuard.verify(text, Set.of(new BigDecimal(input)));
         assertThat(v.verified()).isEqualTo(ok);

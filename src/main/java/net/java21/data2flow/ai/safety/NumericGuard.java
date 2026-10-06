@@ -144,7 +144,10 @@ public final class NumericGuard {
     }
 
     private static boolean close(Found f, BigDecimal candidate) {
-        BigDecimal shown = candidate.divide(f.scale(), 12, RoundingMode.HALF_UP);
+        // 나눗셈 자릿수는 문장에 보인 자릿수보다 넉넉해야 한다. 12자리로 고정하면 분석 결과의 double을 그대로 옮긴
+        // 1098.2916666666667(소수 13자리) 같은 값이 원본과 같아도 불일치가 된다(M6 시연에서 발견)
+        BigDecimal shown = f.scale().compareTo(BigDecimal.ONE) == 0 ? candidate
+                : candidate.divide(f.scale(), Math.max(12, f.decimals() + 2), RoundingMode.HALF_UP);
         return shown.setScale(f.decimals(), RoundingMode.HALF_UP).compareTo(f.value()) == 0
                 || shown.setScale(f.decimals(), RoundingMode.HALF_EVEN).compareTo(f.value()) == 0;
     }

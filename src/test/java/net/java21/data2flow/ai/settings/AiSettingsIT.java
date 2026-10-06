@@ -52,6 +52,12 @@ class AiSettingsIT extends AbstractIT {
         assertThat(JSON.readTree(saved.body()).path("response").path("logRetentionDays").asInt()).isEqualTo(30);
         Awaitility.await().atMost(Duration.ofSeconds(5)).until(() -> Downstream.requests("/internal/core/audit-logs").stream()
                 .anyMatch(r -> r.getBody().clone().readUtf8().contains("AI_SETTINGS_CHANGED")));
+        // core 신원 필터는 X-ORG-ID만 있고 X-USER-ID가 없으면 401로 거절한다 → 조직은 본문으로만(M6 시연에서 감사 유실 발견)
+        assertThat(Downstream.requests("/internal/core/audit-logs")).allSatisfy(r -> {
+            assertThat(r.getHeader("X-ORG-ID")).isNull();
+            assertThat(r.getHeader("X-CALLER-SERVICE")).isEqualTo("data2flow-ai");
+            assertThat(r.getBody().clone().readUtf8()).contains("\"organizationId\":" + ORG);
+        });
 
         HttpResponse<String> stale = put("/ai/settings", ORG, ADMIN, body("NONE", "none", 0, false));
         assertThat(stale.statusCode()).isEqualTo(409);

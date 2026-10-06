@@ -1,9 +1,16 @@
 package net.java21.data2flow.ai.commentary;
 
 import jakarta.validation.Valid;
+import net.java21.data2flow.contracts.error.BusinessException;
+import net.java21.data2flow.contracts.web.ErrorResponse;
+import net.java21.data2flow.contracts.web.GlobalExceptionHandler;
 import net.java21.data2flow.contracts.web.ListApiResponse;
 import net.java21.data2flow.contracts.web.PageParams;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,9 +34,34 @@ public class CommentaryController {
 
     static final int CHUNK = 80;
     private final CommentaryService service;
+    private final GlobalExceptionHandler errors;
 
-    public CommentaryController(CommentaryService service) {
+    public CommentaryController(CommentaryService service, GlobalExceptionHandler errors) {
         this.service = service;
+        this.errors = errors;
+    }
+
+    /**
+     * 스트림 시작 전 오류는 일반 JSON 오류로 답한다. 이 경로는 {@code produces = text/event-stream}이라 공통 처리기의 JSON 본문이
+     * 내용 협상에서 막혀(Accept: text/event-stream만 보내는 웹 BFF) 500이 되므로, Content-Type을 JSON으로 정해 돌려준다(M6 시연에서 발견).
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> beforeStream(BusinessException ex) {
+        return asJson(errors.handleBusiness(ex));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> invalidBeforeStream(MethodArgumentNotValidException ex) {
+        return asJson(errors.handleValidation(ex));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> unreadableBeforeStream(HttpMessageNotReadableException ex) {
+        return asJson(errors.handleBadRequest(ex));
+    }
+
+    private static ResponseEntity<ErrorResponse> asJson(ResponseEntity<ErrorResponse> r) {
+        return ResponseEntity.status(r.getStatusCode()).headers(r.getHeaders()).contentType(MediaType.APPLICATION_JSON).body(r.getBody());
     }
 
     @PostMapping(path = "/ai/commentaries", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

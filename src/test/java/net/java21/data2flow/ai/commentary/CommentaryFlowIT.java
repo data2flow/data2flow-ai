@@ -155,6 +155,24 @@ class CommentaryFlowIT extends AbstractIT {
     }
 
     @Test
+    @DisplayName("[AIA-01.01][TC-AIA-065] 웹 BFF처럼 Accept: text/event-stream만 보내도 스트림 전 오류는 JSON(503·400·검증 400) — 500이 아님")
+    void errorsBeforeStreamAreJsonForEventStreamOnlyAccept() throws Exception {
+        jdbc.update("INSERT INTO data2flow_ai.ai_settings (organization_id, enabled, provider, model, version) VALUES (?, true, 'NONE', 'x', 1)", ORG);
+        HttpResponse<String> none = postEventStreamOnly(REQUEST);
+        assertThat(none.statusCode()).isEqualTo(503);
+        assertThat(none.headers().firstValue("Content-Type").orElse("")).startsWith("application/json");
+        assertThat(JSON.readTree(none.body()).path("header").path("resultCode").asString()).isEqualTo("AI_PROVIDER_UNAVAILABLE");
+        HttpResponse<String> invalid = postEventStreamOnly("{\"subjectType\":\"ANALYSIS_RUN\"}");
+        assertThat(invalid.statusCode()).isEqualTo(400);
+        assertThat(JSON.readTree(invalid.body()).path("header").path("resultCode").asString()).isEqualTo("INVALID_REQUEST");
+    }
+
+    private HttpResponse<String> postEventStreamOnly(String json) throws Exception {
+        return http.send(request("/ai/commentaries", ORG, ANALYST).header("Content-Type", "application/json").header("Accept", "text/event-stream")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
     @DisplayName("[AIA-07.04][AT-AIA-07.1][TC-AIA-062] 일일 요청 한도를 넘으면 429 AI_QUOTA_EXCEEDED, 사용량에 LIMITED")
     void quota() throws Exception {
         jdbc.update("""
